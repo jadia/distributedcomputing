@@ -1,8 +1,8 @@
 // Arguments: <IP/Domain> <port> <num1> <num2> <operator>
 // Default
+
 import java.net.*;
 import java.io.*;
-
 
 public class Sender {
 
@@ -21,20 +21,30 @@ public class Sender {
                 ObjectOutputStream oos = new ObjectOutputStream(bais);
                 oos.writeObject(transfer);
                 oos.flush();
-                byte[ ] buffer = bais.toByteArray();
+                byte[] buffer = bais.toByteArray();
                 DatagramPacket datagram = new DatagramPacket(buffer, buffer.length, receiverHost, receiverPort);
                 System.out.println("\nSending a message to the Receiver ...\n");
-                mySocket.send(datagram);
+                boolean retry = false;
+                mySocket.setSoTimeout(1500); // sender waits for 1.5s if receiver is offline.
                 final int MAX_LEN = 1000;
                 byte[] result = new byte[MAX_LEN];
-                DatagramPacket receiveResult = new DatagramPacket(result, MAX_LEN);
-                mySocket.receive(receiveResult);
+                do {
+                    retry = false;
+                    mySocket.send(datagram);
+                    DatagramPacket receiveResult = new DatagramPacket(result, MAX_LEN);
+                    try {
+                        mySocket.receive(receiveResult);
+                    } catch (SocketTimeoutException s) {
+                        retry = true;
+                        System.out.println("Receiver offline. Please wait for a while.");
+                    }
+                } while (retry);
                 String message = new String(result);
                 System.out.println(message);
-                mySocket.close( );
+                mySocket.close();
             } // end try
             catch (Exception ex) {
-                ex.printStackTrace( );
+                ex.printStackTrace();
             }
         } // end else
     } // end main
